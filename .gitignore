@@ -1,4 +1,22 @@
+# Ignore local data and large folders
+results.txt
+removed_files_backup.tar.gz
 Clips/
 Frames/
 data/
+
+# Model weights and checkpoints
+*.pt
 delivery_detector.pt
+checkpoints/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+.DS_Store
