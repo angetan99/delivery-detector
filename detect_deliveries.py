@@ -26,8 +26,7 @@ DB_PATH            = "predictions.db"
 CLIPS_DIR          = os.path.join("inference", "clips")
 FRAMES_DIR         = os.path.join("inference", "frames")
 
-CLIP_OFFSET_SEC    = 3      # seconds into clip before first frame
-NUM_FRAMES         = 6      # frames to sample
+EMPTY_FRAME_DURATION    = 13      # the last ~13s of Arlo clips are usually empty after delivery, so ignore those when sampling frames
 CLIP_WAIT_SEC      = 20     # time to wait for Arlo to finish uploading
 DELIVERY_THRESHOLD = 0.5
 
@@ -71,28 +70,24 @@ def extract_frames(clip_path, timestamp_str):
     duration_sec = total_frames / fps
     log.info(f"Clip: {duration_sec:.1f}s @ {fps:.1f}fps")
 
+    sample_end_frame = int((duration_sec - EMPTY_FRAME_DURATION) * fps)
+
     pil_frames = []
-    sample_end = duration_sec - 10
-    stride = (sample_end - CLIP_OFFSET_SEC) / (NUM_FRAMES - 1)
-    for i in range(NUM_FRAMES):
-        target_sec = CLIP_OFFSET_SEC + i * stride
-        if target_sec >= sample_end:
-            log.warning(f"Frame {i} at {target_sec:.1f}s exceeds clip length, stopping early.")
-            break
-        cap.set(cv2.CAP_PROP_POS_FRAMES, int(target_sec * fps))
+    frame_count = 0
+    while True:
         ret, bgr = cap.read()
         if not ret:
-            log.warning(f"Could not read frame at {target_sec:.1f}s.")
-            continue
-        frame_filename = f"{timestamp_str}_frame{i}.jpeg"
-        frame_path = os.path.join(FRAMES_DIR, frame_filename)
-        cv2.imwrite(frame_path, bgr)
-        log.info(f"Saved frame {i} → {frame_path}")
-        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-        pil_frames.append(Image.fromarray(rgb))
-
-    cap.release()
-    return pil_frames
+            break
+        if frame_count > sample_end_frame:
+            break
+        if frame_count % 40 == 0:
+            frame_filename = f"{timestamp_str}_frame{frame_count}.jpeg"
+            frame_path = os.path.join(FRAMES_DIR, frame_filename)
+            cv2.imwrite(frame_path, bgr)
+            log.info(f"Saved frame {frame_count} → {frame_path}")
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            pil_frames.append(Image.fromarray(rgb))
+        frame_count += 1
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────
@@ -163,9 +158,10 @@ def log_prediction(conn, result, clip_filename):
 # ── Motion handler ────────────────────────────────────────────────────────────
 
 def on_motion(model, conn, camera, attr, value):
-    current_hour = datetime.now().hour  # local time
+    # log.info(f"Callback fired — attr={attr} value={value}") # just for debugging
     if not value:
         return
+    current_hour = datetime.now().hour  # local time
     if not (DELIVERY_HOUR_START <= current_hour <= DELIVERY_HOUR_END):
         log.info("Motion outside daylight hours — skipping.")
         return
@@ -198,8 +194,7 @@ def on_motion(model, conn, camera, attr, value):
     result = run_inference(model, frames)
     log_prediction(conn, result, clip_filename)
 
-    emoji = "📦" if result["prediction"] == "delivery" else "🚶"
-    print(f"\n{emoji}  {result['prediction'].upper()}  "
+    print(f"\n{result['prediction'].upper()}  "
           f"(mean prob: {result['mean_prob']:.1%})  "
           f"{'[confident]' if result['confident'] else '[uncertain]'}\n")
 
@@ -222,9 +217,6 @@ def main():
         synchronous_mode=False,
     )
 
-    log.info(f"Doorbells: {[d.name for d in arlo.doorbells]}")
-    log.info(f"Cameras: {[d.name for d in arlo.cameras]}")
-
     camera = arlo.lookup_camera_by_name(CAMERA_NAME)
     if camera is None:
         log.error(f"Device '{CAMERA_NAME}' not found. Check name matches the Arlo app exactly.")
@@ -234,7 +226,7 @@ def main():
     log.info(f"Found device: {camera.name}")
     camera.add_attr_callback(
         MOTION_DETECTED_KEY,
-        lambda attr, value: on_motion(model, conn, camera, attr, value),
+        lambda device, attr, value: on_motion(model, conn, camera, attr, value),
     )
 
     log.info("Listening for motion… (Ctrl-C to quit)")
