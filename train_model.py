@@ -7,7 +7,6 @@ import time
 import os
 from tempfile import TemporaryDirectory
 import wandb
-from datetime import datetime
 
 # loading data
 data_transforms = {
@@ -42,7 +41,7 @@ print(f"Using {device} device")
 
 wandb.init(
     project="delivery-detector",
-    config={ # update these during new training runs 
+    config={ # update these during new training runs
         "model": "ResNet50",
         "epochs": 25,
         "batch_size": 4,
@@ -54,7 +53,6 @@ wandb.init(
 # training the model
 def train_model(model, criterion, optimizer, scheduler, num_epochs=10):
     since = time.time()
-    results_log = []
 
     # Create a temporary directory to save training checkpoints
     with TemporaryDirectory() as tempdir:
@@ -107,10 +105,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=10):
                 epoch_acc = running_corrects.double() / dataset_sizes[phase]
 
                 print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
-                print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
-                results_log.append(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
-                print(f'Epoch {epoch}/{num_epochs - 1}')
-                results_log.append(f'Epoch {epoch}/{num_epochs - 1}')
 
                 if phase == 'train':
                     wandb.log({"train_loss": epoch_loss, "train_acc": epoch_acc.item()})
@@ -146,10 +140,5 @@ model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
                        num_epochs=25)
 
 torch.save(model_ft.state_dict(), os.path.join(os.path.dirname(__file__), 'delivery_detector.pt'))
-date_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-results_path = os.path.join(os.path.dirname(__file__), f'results_{date_str}.txt')
-with open(results_path, 'w') as f:
-    f.write('\n'.join(results_log))
-print(f"Results saved to results_{date_str}.txt")
 wandb.finish()
 print("Model saved successfully")
