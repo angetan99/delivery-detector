@@ -5,3 +5,7 @@ data/
 delivery_detector.pt
 .DS_Store
 wandb/
+.env
+inference/clips/
+inference/frames/
+predictions.db
