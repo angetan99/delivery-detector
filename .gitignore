@@ -4,3 +4,4 @@ Frames/
 data/
 delivery_detector.pt
 .DS_Store
+wandb/
