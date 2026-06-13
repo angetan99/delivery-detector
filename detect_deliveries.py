@@ -21,12 +21,15 @@ load_dotenv()
 ARLO_USERNAME = os.environ["ARLO_USERNAME"]
 ARLO_PASSWORD = os.environ["ARLO_PASSWORD"]
 CAMERA_NAME = os.environ["CAMERA_NAME"]
+PUSHOVER_USER_KEY = os.environ["PUSHOVER_USER_KEY"]
+PUSHOVER_API_TOKEN = os.environ["PUSHOVER_API_TOKEN"]
 MODEL_PATH         = "delivery_detector.pt"
 DB_PATH            = "predictions.db"
 CLIPS_DIR          = os.path.join("inference", "clips")
 FRAMES_DIR         = os.path.join("inference", "frames")
 
-EMPTY_FRAME_DURATION    = 13      # the last ~13s of Arlo clips are usually empty after delivery, so ignore those when sampling frames
+
+EMPTY_FRAME_DURATION    = 0      # the last ~13s of Arlo clips are usually empty after delivery, so ignore those when sampling frames
 CLIP_WAIT_SEC      = 20     # time to wait for Arlo to finish uploading
 DELIVERY_THRESHOLD = 0.5
 
@@ -69,7 +72,6 @@ def extract_frames(clip_path, timestamp_str):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     duration_sec = total_frames / fps
     log.info(f"Clip: {duration_sec:.1f}s @ {fps:.1f}fps")
-
     sample_end_frame = int((duration_sec - EMPTY_FRAME_DURATION) * fps)
 
     pil_frames = []
@@ -154,6 +156,18 @@ def log_prediction(conn, result, clip_filename):
     conn.commit()
     log.info(f"Logged to DB: {result['prediction']} (mean_prob={result['mean_prob']:.3f})")
 
+# ── Pushover ───────────────────────────────────────────────────────────────────
+
+def send_push_notification(mean_prob):
+    import requests
+    requests.post("https://api.pushover.net/1/messages.json", data={
+        "token": PUSHOVER_API_TOKEN,
+        "user": PUSHOVER_USER_KEY,
+        "title": "Delivery detected!",
+        "message": f"Confidence: {mean_prob:.1%}",
+        "priority": 0,
+    })
+    log.info("Push notification sent.")
 
 # ── Motion handler ────────────────────────────────────────────────────────────
 
@@ -193,6 +207,11 @@ def on_motion(model, conn, camera, attr, value):
 
     result = run_inference(model, frames)
     log_prediction(conn, result, clip_filename)
+
+    if result["prediction"] == "delivery":
+        send_push_notification("Delivery", result["mean_prob"])
+    else:
+        send_push_notification("Not a delivery", result["mean_prob"])
 
     print(f"\n{result['prediction'].upper()}  "
           f"(mean prob: {result['mean_prob']:.1%})  "
