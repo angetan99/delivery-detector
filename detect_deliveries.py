@@ -159,12 +159,12 @@ def log_prediction(conn, result, clip_filename):
 
 # ── Pushover ───────────────────────────────────────────────────────────────────
 
-def send_push_notification(mean_prob):
+def send_push_notification(title, mean_prob):
     import requests
     requests.post("https://api.pushover.net/1/messages.json", data={
         "token": PUSHOVER_API_TOKEN,
         "user": PUSHOVER_USER_KEY,
-        "title": "Delivery detected!",
+        "title": title,
         "message": f"Confidence: {mean_prob:.1%}",
         "priority": 0,
     })
@@ -177,7 +177,7 @@ def on_motion(model, conn, camera, attr, value):
     if not value:
         return
     current_hour = datetime.now().hour  # local time
-    if not (DELIVERY_HOUR_START <= current_hour <= DELIVERY_HOUR_END):
+    if not (DELIVERY_HOUR_START <= current_hour < DELIVERY_HOUR_END):
         log.info("Motion outside daylight hours — skipping.")
         return
 
