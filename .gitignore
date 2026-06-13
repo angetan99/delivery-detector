@@ -9,3 +9,4 @@ wandb/
 inference/clips/
 inference/frames/
 predictions.db
+launchd.log
