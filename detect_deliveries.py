@@ -90,7 +90,8 @@ def extract_frames(clip_path, timestamp_str):
             rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
             pil_frames.append(Image.fromarray(rgb))
         frame_count += 1
-
+    cap.release()
+    return pil_frames
 
 # ── Inference ─────────────────────────────────────────────────────────────────
 
