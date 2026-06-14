@@ -124,3 +124,15 @@ def get_frame(filename: str):
     if not path.exists():
         raise HTTPException(404, "frame not found")
     return FileResponse(path)
+
+
+@app.get("/frames-for/{clip_filename}")
+def get_frame_for_clip(clip_filename: str):
+    """Resolve any frame image belonging to a clip, e.g. clip_filename
+    '20260612_160845' matches 'inference/frames/20260612_160845_frame2.jpeg'
+    regardless of the frame number suffix."""
+    stem = Path(clip_filename).stem
+    matches = sorted(FRAMES_DIR.glob(f"{stem}_frame*.jpeg"))
+    if not matches:
+        raise HTTPException(404, "no frame found for clip")
+    return {"filename": matches[0].name}
