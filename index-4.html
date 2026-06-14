@@ -477,12 +477,13 @@ function renderExampleCard(pred) {
     else if (conf < 0.9) badgeClass = "bg-orange-50 text-yellow-600 border border-yellow-600";
     else badgeClass = "bg-green-600 text-white";
 
+    const cardId = `example-img-${pred.id}`;
+
     return `
         <div class="card overflow-hidden">
             <div class="aspect-[1.5] bg-surface relative">
-                <img alt="Prediction frame" class="w-full h-full object-cover"
-                     src="${frameUrl(pred.clip_filename)}"
-                     onerror="this.style.display='none'">
+                <img id="${cardId}" alt="Prediction frame" class="w-full h-full object-cover"
+                     src="" onerror="this.style.display='none'">
                 <div class="absolute top-2 right-2 ${badgeClass} px-sm py-xs rounded text-label-sm font-label-sm">
                     ${pct(conf)}
                 </div>
@@ -493,6 +494,17 @@ function renderExampleCard(pred) {
             </div>
         </div>
     `;
+}
+
+async function loadFrameImage(pred) {
+    const img = document.getElementById(`example-img-${pred.id}`);
+    if (!img || !pred.clip_filename) return;
+    try {
+        const res = await getJSON(`/frames-for/${encodeURIComponent(pred.clip_filename)}`);
+        img.src = frameUrl(res.filename);
+    } catch (e) {
+        img.style.display = "none";
+    }
 }
 
 async function loadExamples() {
@@ -514,6 +526,7 @@ async function loadExamples() {
             container.innerHTML = `<p class="text-body-sm text-secondary">No examples in this range.</p>`;
         } else {
             container.innerHTML = items.map(renderExampleCard).join("");
+            items.forEach(loadFrameImage);
         }
     }
 }
