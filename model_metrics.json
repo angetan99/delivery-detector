@@ -1,0 +1,13 @@
+{
+  "accuracy": 0.9865,
+  "recall": 1.0,
+  "precision": 0.97,
+  "f1": 0.984,
+  "confusion_matrix": [[74, 0], [2, 72]],
+  "labels": ["no_delivery", "delivery"],
+  "evaluated_at": "2026-06-11T23:27:00",
+  "wandb": {
+    "run_url": "https://wandb.ai/angelatan2007-purdue-university/delivery-detector/workspace?nw=nwuserangelatan2007",
+    "sample_image": "w&b_Example.png"
+  }
+}
