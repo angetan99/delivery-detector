@@ -123,10 +123,73 @@
             border-radius: 10px;
         }
         .matrix-cell {
-            height: 80px;
+            min-height: 88px;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        .confusion-matrix-grid {
+            grid-template-columns: minmax(88px, 120px) minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-rows: auto minmax(88px, 1fr) minmax(88px, 1fr);
+        }
+        .matrix-label {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+        .section-title {
+            font-family: Avenir, Inter, sans-serif;
+            font-size: 1.375rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            color: #191c1e;
+        }
+        .refresh-icon {
+            transition: transform 0.2s ease;
+        }
+        .refreshing .refresh-icon {
+            animation: refresh-spin 0.8s linear infinite;
+        }
+        .refreshing {
+            box-shadow: 0 0 0 4px rgba(0, 74, 198, 0.12);
+        }
+        .dashboard-refreshing {
+            animation: dashboard-pulse 0.45s ease;
+        }
+        .frame-modal {
+            background: rgba(25, 28, 30, 0.72);
+            backdrop-filter: blur(8px);
+        }
+        .frame-modal[hidden] {
+            display: none;
+        }
+        .prediction-row {
+            cursor: pointer;
+        }
+        .prediction-row:hover td {
+            background-color: rgba(219, 225, 255, 0.42);
+        }
+        .confusion-matrix-grid .matrix-corner {
+            background: #f7f9fb;
+        }
+        .confusion-matrix-grid .matrix-label {
+            background: #f7f9fb;
+            color: #737686;
+        }
+        .confusion-matrix-grid .matrix-cell {
+            background: #ffffff;
+        }
+        @keyframes refresh-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        @keyframes dashboard-pulse {
+            0% {
+                opacity: 0.82;
+            }
+            100% {
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -138,10 +201,18 @@
 <h1 class="text-4xl font-bold text-on-surface" style="font-family: Avenir, Inter, sans-serif;">Delivery Detector Dashboard</h1>
 <p class="font-body-md text-body-md text-secondary mt-xs">Last updated: <span id="last-updated">—</span></p>
 </div>
-<div class="flex gap-sm">
+<div class="flex flex-wrap justify-start md:justify-end gap-sm">
+<a class="text-primary border border-primary px-sm py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-fixed transition-colors" href="https://github.com/angetan99/delivery-detector" target="_blank" rel="noopener">
+Github Repo
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+<a class="text-primary border border-primary px-sm py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-fixed transition-colors" href="https://wandb.ai/angelatan2007-purdue-university/delivery-detector/workspace?nw=nwuserangelatan2007" target="_blank" rel="noopener">
+W&amp;B Log
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
 <button id="refresh-btn" class="bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-container transition-colors">
-<span class="material-symbols-outlined text-[18px]">refresh</span>
-                    Refresh Data
+<span class="material-symbols-outlined text-[18px] refresh-icon">refresh</span>
+<span id="refresh-label">Refresh Data</span>
                 </button>
 </div>
 </header>
@@ -166,25 +237,25 @@
 </div>
 </div>
 <!-- Confusion Matrix Card -->
-<div class="card p-md max-w-2xl lg:col-span-6 max-w-none h-full">
-<h3 class="font-headline-sm text-headline-sm text-on-surface mb-md" style="font-family: Avenir, Inter, sans-serif;">Confusion Matrix</h3>
-<div class="grid grid-cols-[120px_1fr_1fr] gap-px bg-outline-variant border border-outline-variant rounded overflow-hidden" id="confusion-matrix">
-<div class="bg-surface p-sm"></div>
-<div class="bg-surface p-sm text-center font-label-md text-label-md text-secondary col-pred-0">—</div>
-<div class="bg-surface p-sm text-center font-label-md text-label-md text-secondary col-pred-1">—</div>
-<div class="bg-surface p-sm flex items-center font-label-md text-label-md text-secondary row-label-0">—</div>
-<div class="bg-surface matrix-cell font-mono-md text-mono-md text-secondary text-4xl font-bold cell-00">—</div>
-<div class="bg-surface matrix-cell font-mono-md text-mono-md text-red-600 text-4xl font-bold cell-01">—</div>
-<div class="bg-surface p-sm flex items-center font-label-md text-label-md text-secondary row-label-1">—</div>
-<div class="bg-surface matrix-cell font-mono-md text-mono-md text-yellow-600 text-4xl font-bold cell-10">—</div>
-<div class="bg-surface matrix-cell font-mono-md text-mono-md text-green-600 text-4xl font-bold cell-11">—</div>
+<div class="card p-md lg:col-span-6 h-full flex flex-col">
+<h3 class="section-title mb-md">Confusion Matrix</h3>
+<div class="confusion-matrix-grid grid flex-1 gap-px bg-outline-variant border border-outline-variant rounded overflow-hidden min-h-[240px]" id="confusion-matrix">
+<div class="matrix-corner p-sm"></div>
+<div class="matrix-label bg-surface p-sm text-center font-label-md text-label-md text-secondary col-pred-0">—</div>
+<div class="matrix-label bg-surface p-sm text-center font-label-md text-label-md text-secondary col-pred-1">—</div>
+<div class="matrix-label bg-surface p-sm flex items-center font-label-md text-label-md text-secondary row-label-0">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-secondary text-4xl font-bold cell-00">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-red-600 text-4xl font-bold cell-01">—</div>
+<div class="matrix-label bg-surface p-sm flex items-center font-label-md text-label-md text-secondary row-label-1">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-yellow-600 text-4xl font-bold cell-10">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-green-600 text-4xl font-bold cell-11">—</div>
 </div>
-<p class="font-body-sm text-body-sm text-secondary mt-sm" id="metrics-evaluated-at"></p>
+<p class="font-body-sm text-body-sm text-secondary mt-sm" id="training-version"></p>
 </div>
 <!-- Weights & Biases -->
 <div class="card p-md lg:col-span-6 flex flex-col">
 <div class="flex justify-between items-start mb-md">
-<h3 class="font-headline-sm text-headline-sm text-on-surface" style="font-family: Avenir, Inter, sans-serif;">Training Run</h3>
+<h3 class="section-title">Most Recent Training Run</h3>
 <a class="text-primary hover:underline font-label-md text-label-md flex items-center gap-xs" id="wandb-link" href="#" target="_blank" rel="noopener">
                         View on W&amp;B
                         <span class="material-symbols-outlined text-[16px]">open_in_new</span>
@@ -199,8 +270,8 @@
 <section class="grid grid-cols-1 gap-gutter">
 <div class="card p-md">
 <div class="flex justify-between items-center mb-md">
-<h3 class="font-headline-sm text-headline-sm text-on-surface" style="font-family: Avenir, Inter, sans-serif;">Accuracy on Live Footage Over Time</h3>
-<div class="flex items-center gap-sm">
+<h3 class="section-title">Accuracy on Live Footage Over Time</h3>
+<div class="flex items-center gap-lg">
 <span class="flex items-center gap-xs text-body-sm font-body-sm text-secondary">
 <span class="w-3 h-3 bg-primary rounded-full"></span> Accuracy
                         </span>
@@ -212,12 +283,12 @@
 <div class="h-[300px]">
 <canvas height="600" id="performanceChart" style="display: block; box-sizing: border-box; height: 300px; width: 100%;" width="1772"></canvas>
 </div>
-<p class="font-body-sm text-body-sm text-secondary mt-md italic">Vertical markers indicate model retrain events. Only days with labeled predictions are shown.</p>
+<p class="font-body-sm text-body-sm text-secondary mt-md italic">Vertical markers indicate model retrain events.</p>
 </div>
 </section>
 <!-- Confidence Examples -->
 <section class="space-y-md">
-<h3 class="font-headline-sm text-headline-sm text-on-surface" style="font-family: Avenir, Inter, sans-serif;">Example Predictions by Confidence Level</h3>
+<h3 class="section-title">Example Predictions by Confidence Level</h3>
 <div class="flex flex-wrap items-center gap-md mb-sm">
 <label class="text-body-sm text-secondary">Low/Medium threshold
 <input id="thresh-low" type="number" step="0.01" min="0" max="1" value="0.6" class="ml-xs w-20 px-sm py-xs border border-outline rounded font-mono-md text-body-sm">
@@ -257,7 +328,7 @@
 <!-- Predictions Log -->
 <section class="card overflow-hidden">
 <div class="p-md border-b border-outline-variant flex justify-between items-center bg-white">
-<h3 class="font-headline-sm text-headline-sm text-on-surface" style="font-family: Avenir, Inter, sans-serif;">Predictions Log</h3>
+<h3 class="section-title">Predictions Log</h3>
 </div>
 <div class="overflow-x-auto custom-scrollbar">
 <table class="w-full text-left border-collapse">
@@ -279,9 +350,28 @@
 </div>
 </section>
 </main>
-<footer class="mt-xxl border-t border-outline-variant p-lg flex flex-col md:flex-row justify-between items-center gap-md">
-<div class="flex items-center gap-md">
-<span class="font-headline-sm font-bold text-secondary">Delivery-Detector</span>
+<div id="frame-modal" class="frame-modal fixed inset-0 z-50 flex items-center justify-center p-lg" hidden>
+<div class="bg-white border border-outline-variant rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+<div class="p-md border-b border-outline-variant flex items-center justify-between gap-md">
+<div>
+<h3 class="section-title" id="frame-modal-title">Prediction Frame</h3>
+<p class="font-body-sm text-body-sm text-secondary mt-xs" id="frame-modal-meta"></p>
+</div>
+<button id="frame-modal-close" class="text-secondary hover:text-on-surface hover:bg-surface-container-high rounded p-xs transition-colors" type="button" aria-label="Close frame preview">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+</div>
+<div class="bg-surface-dim min-h-[320px] flex items-center justify-center">
+<img id="frame-modal-img" alt="Prediction frame preview" class="max-h-[72vh] w-full object-contain hidden">
+<p id="frame-modal-status" class="font-body-md text-body-md text-secondary">Loading frame...</p>
+</div>
+</div>
+</div>
+<footer class="mt-xxl border-t border-outline-variant p-lg flex justify-center items-center">
+<div class="flex flex-col sm:flex-row items-center gap-xs sm:gap-md text-center">
+<span class="font-headline-sm font-bold text-secondary">Delivery Detector</span>
+<span class="hidden sm:inline text-outline">/</span>
+<span class="font-body-sm text-body-sm text-secondary">Angela Tan</span>
 </div>
 </footer>
 <script>
@@ -310,6 +400,19 @@ function frameUrl(filename) {
     return `${API_BASE}/frames/${encodeURIComponent(filename)}`;
 }
 
+function assetUrl(filename) {
+    if (!filename) return "";
+    return `${API_BASE}/assets/${encodeURIComponent(filename)}`;
+}
+
+function escapeAttr(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+}
+
 async function getJSON(path) {
     const res = await fetch(`${API_BASE}${path}`);
     if (!res.ok) throw new Error(`${path} -> ${res.status}`);
@@ -328,7 +431,7 @@ async function loadMetrics() {
         return;
     }
     if (metrics.error) {
-        document.getElementById("metrics-evaluated-at").textContent = metrics.error;
+        document.getElementById("training-version").textContent = metrics.error;
         return;
     }
 
@@ -337,9 +440,17 @@ async function loadMetrics() {
     document.getElementById("metric-recall").textContent = pct(metrics.recall);
     document.getElementById("metric-f1").textContent = pct(metrics.f1);
 
-    if (metrics.evaluated_at) {
-        document.getElementById("metrics-evaluated-at").textContent =
-            "Evaluated: " + metrics.evaluated_at;
+    const trainingVersion = document.getElementById("training-version");
+    try {
+        const retrains = await getJSON("/retrains");
+        const latestRetrain = (retrains || [])
+            .filter(retrain => retrain.timestamp || retrain.notes)
+            .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))[0];
+        trainingVersion.textContent = latestRetrain?.notes
+            ? `Training version: ${latestRetrain.notes}`
+            : "Training version: most recent model";
+    } catch (e) {
+        trainingVersion.textContent = "Training version: most recent model";
     }
 
     // Confusion matrix (assumes 2x2, labels = [class0, class1])
@@ -347,8 +458,8 @@ async function loadMetrics() {
         const [label0, label1] = metrics.labels;
         const cm = metrics.confusion_matrix;
         const container = document.getElementById("confusion-matrix");
-        container.querySelector(".col-pred-0").textContent = `Pred: ${label0}`;
-        container.querySelector(".col-pred-1").textContent = `Pred: ${label1}`;
+        container.querySelector(".col-pred-0").textContent = `Predicted ${label0}`;
+        container.querySelector(".col-pred-1").textContent = `Predicted ${label1}`;
         container.querySelector(".row-label-0").textContent = `Actual: ${label0}`;
         container.querySelector(".row-label-1").textContent = `Actual: ${label1}`;
         container.querySelector(".cell-00").textContent = cm[0][0];
@@ -362,7 +473,8 @@ async function loadMetrics() {
         const link = document.getElementById("wandb-link");
         const img = document.getElementById("wandb-image");
         if (metrics.wandb.run_url) link.href = metrics.wandb.run_url;
-        if (metrics.wandb.sample_image_url) img.src = metrics.wandb.sample_image_url;
+        const sampleImage = metrics.wandb.sample_image_url || assetUrl(metrics.wandb.sample_image);
+        if (sampleImage) img.src = sampleImage;
     }
 }
 
@@ -482,8 +594,7 @@ function renderExampleCard(pred) {
     return `
         <div class="card overflow-hidden">
             <div class="aspect-[1.5] bg-surface relative">
-                <img id="${cardId}" alt="Prediction frame" class="w-full h-full object-cover"
-                     src="" onerror="this.style.display='none'">
+                <img id="${cardId}" alt="Prediction frame" class="hidden w-full h-full object-cover">
                 <div class="absolute top-2 right-2 ${badgeClass} px-sm py-xs rounded text-label-sm font-label-sm">
                     ${pct(conf)}
                 </div>
@@ -501,9 +612,11 @@ async function loadFrameImage(pred) {
     if (!img || !pred.clip_filename) return;
     try {
         const res = await getJSON(`/frames-for/${encodeURIComponent(pred.clip_filename)}`);
+        img.onload = () => img.classList.remove("hidden");
+        img.onerror = () => img.classList.add("hidden");
         img.src = frameUrl(res.filename);
     } catch (e) {
-        img.style.display = "none";
+        img.classList.add("hidden");
     }
 }
 
@@ -535,13 +648,16 @@ async function loadExamples() {
 // Predictions Log (scrollable table with labeling buttons)
 // ============================================================
 function renderPredictionRow(pred) {
+    const clipFilename = escapeAttr(pred.clip_filename);
+    const modalTitle = escapeAttr(`#${pred.id} ${pred.prediction}`);
+    const modalMeta = escapeAttr(`${pred.timestamp} • ${pct(pred.mean_prob)} • ${pred.num_frames ?? "—"} frames`);
     const labelCell = `
         <td class="px-md py-sm text-right space-x-sm" id="label-cell-${pred.id}">
             ${renderLabelControls(pred)}
         </td>
     `;
     return `
-        <tr class="hover:bg-blue-50/30 transition-colors">
+        <tr class="prediction-row transition-colors" data-clip-filename="${clipFilename}" data-modal-title="${modalTitle}" data-modal-meta="${modalMeta}" onclick="openPredictionFrame(this)">
             <td class="px-md py-sm font-mono-md text-body-sm text-on-surface">#${pred.id}</td>
             <td class="px-md py-sm font-body-sm text-secondary">${pred.timestamp}</td>
             <td class="px-md py-sm font-body-md text-on-surface">${pred.prediction}</td>
@@ -565,10 +681,49 @@ function renderLabelControls(pred) {
     }
     return `
         <button class="text-primary hover:bg-primary-fixed px-sm py-xs rounded font-label-md text-label-md transition-colors border border-primary"
-                onclick="labelPrediction(${pred.id}, 1)">Correct</button>
+                onclick="event.stopPropagation(); labelPrediction(${pred.id}, 1)">Correct</button>
         <button class="text-red-600 hover:bg-error-container px-sm py-xs rounded font-label-md text-label-md transition-colors border border-red-600"
-                onclick="labelPrediction(${pred.id}, 0)">Incorrect</button>
+                onclick="event.stopPropagation(); labelPrediction(${pred.id}, 0)">Incorrect</button>
     `;
+}
+
+async function openPredictionFrame(row) {
+    const clipFilename = row.dataset.clipFilename;
+    const modal = document.getElementById("frame-modal");
+    const img = document.getElementById("frame-modal-img");
+    const status = document.getElementById("frame-modal-status");
+    document.getElementById("frame-modal-title").textContent = row.dataset.modalTitle || "Prediction Frame";
+    document.getElementById("frame-modal-meta").textContent = row.dataset.modalMeta || "";
+    modal.hidden = false;
+    img.classList.add("hidden");
+    img.removeAttribute("src");
+    status.classList.remove("hidden");
+    status.textContent = "Loading frame...";
+
+    try {
+        const res = await getJSON(`/frames-for/${encodeURIComponent(clipFilename)}`);
+        img.onload = () => {
+            status.classList.add("hidden");
+            img.classList.remove("hidden");
+        };
+        img.onerror = () => {
+            img.classList.add("hidden");
+            status.classList.remove("hidden");
+            status.textContent = "Frame could not be loaded.";
+        };
+        img.src = frameUrl(res.filename);
+    } catch (e) {
+        img.classList.add("hidden");
+        status.classList.remove("hidden");
+        status.textContent = "No frame found for this prediction.";
+    }
+}
+
+function closePredictionFrame() {
+    const modal = document.getElementById("frame-modal");
+    const img = document.getElementById("frame-modal-img");
+    modal.hidden = true;
+    img.removeAttribute("src");
 }
 
 async function labelPrediction(id, correctValue) {
@@ -613,19 +768,50 @@ async function loadPredictions(reset = false) {
 // ============================================================
 // Wire up + initial load
 // ============================================================
-async function refreshAll() {
-    document.getElementById("last-updated").textContent = new Date().toLocaleString();
-    await Promise.all([
-        loadMetrics(),
-        loadPerformanceChart(),
-        loadExamples(),
-        loadPredictions(true),
-    ]);
+function setRefreshState(isRefreshing) {
+    const button = document.getElementById("refresh-btn");
+    const label = document.getElementById("refresh-label");
+    button.disabled = isRefreshing;
+    button.classList.toggle("refreshing", isRefreshing);
+    button.classList.toggle("opacity-90", isRefreshing);
+    button.classList.toggle("cursor-wait", isRefreshing);
+    label.textContent = isRefreshing ? "Refreshing..." : "Refresh Data";
 }
 
-document.getElementById("refresh-btn").addEventListener("click", refreshAll);
+async function refreshAll(showFeedback = false) {
+    const startedAt = Date.now();
+    if (showFeedback) {
+        setRefreshState(true);
+        document.querySelector("main").classList.remove("dashboard-refreshing");
+        requestAnimationFrame(() => document.querySelector("main").classList.add("dashboard-refreshing"));
+    }
+    document.getElementById("last-updated").textContent = new Date().toLocaleString();
+    try {
+        await Promise.all([
+            loadMetrics(),
+            loadPerformanceChart(),
+            loadExamples(),
+            loadPredictions(true),
+        ]);
+    } finally {
+        if (showFeedback) {
+            const elapsed = Date.now() - startedAt;
+            const remaining = Math.max(0, 450 - elapsed);
+            setTimeout(() => setRefreshState(false), remaining);
+        }
+    }
+}
+
+document.getElementById("refresh-btn").addEventListener("click", () => refreshAll(true));
 document.getElementById("load-more-btn").addEventListener("click", () => loadPredictions(false));
 document.getElementById("apply-thresholds").addEventListener("click", loadExamples);
+document.getElementById("frame-modal-close").addEventListener("click", closePredictionFrame);
+document.getElementById("frame-modal").addEventListener("click", event => {
+    if (event.target.id === "frame-modal") closePredictionFrame();
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closePredictionFrame();
+});
 
 refreshAll();
 </script>
