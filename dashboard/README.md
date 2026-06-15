@@ -19,7 +19,7 @@ clips.
 Start the FastAPI backend from the repository root:
 
 ```bash
-uvicorn main:app --reload
+uvicorn dashboard_api:app --reload
 ```
 
 Then open `dashboard/index.html` in a browser.
@@ -30,7 +30,7 @@ The dashboard UI lives in this folder. Backend/data files stay at the repository
 root so the local app keeps working without path changes:
 
 - `dashboard/index.html` - dashboard UI
-- `main.py` - local FastAPI backend
+- `dashboard_api.py` - local FastAPI backend
 - `model_metrics.json` - model evaluation metrics
 - `retrains.json` - training version notes
 - `predictions.db` - local prediction history
@@ -43,7 +43,7 @@ or backend changes together:
 
 ```bash
 git add dashboard/index.html dashboard/README.md
-git add main.py model_metrics.json retrains.json
+git add dashboard_api.py model_metrics.json retrains.json
 git commit -m "Update dashboard"
 git push origin main
 ```
