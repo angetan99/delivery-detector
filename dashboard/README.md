@@ -5,7 +5,7 @@ live prediction history. It shows model metrics, a confusion matrix, W&B trainin
 context, confidence examples, prediction history, and frame previews for logged
 clips.
 
-![Delivery Detector Dashboard](../Delivery%20Detector%20Dashboard.png)
+![Delivery Detector Dashboard](assets/Delivery%20Detector%20Dashboard.png)
 
 ## What It Shows
 

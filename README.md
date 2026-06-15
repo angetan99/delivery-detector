@@ -4,6 +4,8 @@ A real-time computer vision system that monitors an Arlo doorbell camera, detect
 
 Built end-to-end: data collection, model training, live inference pipeline, and hardware integration.
 
+![Delivery Detector Dashboard](dashboard/assets/Delivery%20Detector%20Dashboard.png)
+
 ---
 
 ## How It Works
