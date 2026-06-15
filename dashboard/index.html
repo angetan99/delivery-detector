@@ -1,0 +1,820 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Delivery Detector Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#dbe1ff",
+                        "primary-container": "#2563eb",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "surface": "#f7f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#d0e1fb",
+                        "primary": "#004ac6",
+                        "surface-bright": "#f7f9fb",
+                        "outline-variant": "#c3c6d7",
+                        "surface-dim": "#d8dadc",
+                        "background": "#f7f9fb",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-secondary-container": "#54647a",
+                        "secondary-fixed": "#d3e4fe",
+                        "on-background": "#191c1e",
+                        "on-tertiary-fixed": "#360f00",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#b4c5ff",
+                        "on-primary-container": "#eeefff",
+                        "secondary": "#505f76",
+                        "on-tertiary-container": "#ffede6",
+                        "surface-container-low": "#f2f4f6",
+                        "on-surface-variant": "#434655",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#e0e3e5",
+                        "on-error": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "surface-tint": "#0053db",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#bc4800",
+                        "on-secondary": "#ffffff",
+                        "outline": "#737686",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "tertiary-fixed": "#ffdbcd",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#943700",
+                        "inverse-surface": "#2d3133",
+                        "on-primary-fixed": "#00174b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin": "24px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "xxl": "48px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "md": "16px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "mono-md": ["JetBrains Mono"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #f7f9fb;
+            font-family: 'Inter', sans-serif;
+            color: #191c1e;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            transition: border-color 0.15s ease-in-out;
+        }
+        .card:hover {
+            border-color: #cbd5e1;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .matrix-cell {
+            min-height: 88px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .confusion-matrix-grid {
+            grid-template-columns: minmax(88px, 120px) minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-rows: auto minmax(88px, 1fr) minmax(88px, 1fr);
+        }
+        .matrix-label {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+        .section-title {
+            font-family: Avenir, Inter, sans-serif;
+            font-size: 1.375rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            color: #191c1e;
+        }
+        .refresh-icon {
+            transition: transform 0.2s ease;
+        }
+        .refreshing .refresh-icon {
+            animation: refresh-spin 0.8s linear infinite;
+        }
+        .refreshing {
+            box-shadow: 0 0 0 4px rgba(0, 74, 198, 0.12);
+        }
+        .dashboard-refreshing {
+            animation: dashboard-pulse 0.45s ease;
+        }
+        .frame-modal {
+            background: rgba(25, 28, 30, 0.72);
+            backdrop-filter: blur(8px);
+        }
+        .frame-modal[hidden] {
+            display: none;
+        }
+        .prediction-row {
+            cursor: pointer;
+        }
+        .prediction-row:hover td {
+            background-color: rgba(219, 225, 255, 0.42);
+        }
+        .confusion-matrix-grid .matrix-corner {
+            background: #f7f9fb;
+        }
+        .confusion-matrix-grid .matrix-label {
+            background: #f7f9fb;
+            color: #737686;
+        }
+        .confusion-matrix-grid .matrix-cell {
+            background: #ffffff;
+        }
+        @keyframes refresh-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        @keyframes dashboard-pulse {
+            0% {
+                opacity: 0.82;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-surface selection:bg-primary-fixed">
+<main class="max-w-[1600px] mx-auto px-lg py-xl space-y-xl">
+<!-- Header Section -->
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-md border-b border-outline-variant pb-md">
+<div>
+<h1 class="text-4xl font-bold text-on-surface" style="font-family: Avenir, Inter, sans-serif;">Delivery Detector Dashboard</h1>
+<p class="font-body-md text-body-md text-secondary mt-xs">Last updated: <span id="last-updated">—</span></p>
+</div>
+<div class="flex flex-wrap justify-start md:justify-end gap-sm">
+<a class="text-primary border border-primary px-sm py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-fixed transition-colors" href="https://github.com/angetan99/delivery-detector" target="_blank" rel="noopener">
+Github Repo
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+<a class="text-primary border border-primary px-sm py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-fixed transition-colors" href="https://wandb.ai/angelatan2007-purdue-university/delivery-detector/workspace?nw=nwuserangelatan2007" target="_blank" rel="noopener">
+W&amp;B Log
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+<button id="refresh-btn" class="bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-[18px] refresh-icon">refresh</span>
+<span id="refresh-label">Refresh Data</span>
+                </button>
+</div>
+</header>
+<!-- Model Metrics Panel -->
+<section class="space-y-md lg:grid lg:grid-cols-12 lg:gap-gutter lg:space-y-0 items-stretch">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-gutter lg:col-span-12">
+<div class="card p-md flex flex-col gap-xs">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Accuracy</span>
+<span class="font-headline-md text-on-surface text-4xl font-bold" id="metric-accuracy">—</span>
+</div>
+<div class="card p-md flex flex-col gap-xs">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Precision</span>
+<span class="font-headline-md text-on-surface text-4xl font-bold" id="metric-precision">—</span>
+</div>
+<div class="card p-md flex flex-col gap-xs">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Recall</span>
+<span class="font-headline-md text-on-surface text-4xl font-bold" id="metric-recall">—</span>
+</div>
+<div class="card p-md flex flex-col gap-xs">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">F1 Score</span>
+<span class="font-headline-md text-on-surface text-4xl font-bold" id="metric-f1">—</span>
+</div>
+</div>
+<!-- Confusion Matrix Card -->
+<div class="card p-md lg:col-span-6 h-full flex flex-col">
+<h3 class="section-title mb-md">Confusion Matrix</h3>
+<div class="confusion-matrix-grid grid flex-1 gap-px bg-outline-variant border border-outline-variant rounded overflow-hidden min-h-[240px]" id="confusion-matrix">
+<div class="matrix-corner p-sm"></div>
+<div class="matrix-label bg-surface p-sm text-center font-label-md text-label-md text-secondary col-pred-0">—</div>
+<div class="matrix-label bg-surface p-sm text-center font-label-md text-label-md text-secondary col-pred-1">—</div>
+<div class="matrix-label bg-surface p-sm flex items-center font-label-md text-label-md text-secondary row-label-0">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-secondary text-4xl font-bold cell-00">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-red-600 text-4xl font-bold cell-01">—</div>
+<div class="matrix-label bg-surface p-sm flex items-center font-label-md text-label-md text-secondary row-label-1">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-yellow-600 text-4xl font-bold cell-10">—</div>
+<div class="bg-surface matrix-cell font-headline-md text-green-600 text-4xl font-bold cell-11">—</div>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-sm" id="training-version"></p>
+</div>
+<!-- Weights & Biases -->
+<div class="card p-md lg:col-span-6 flex flex-col">
+<div class="flex justify-between items-start mb-md">
+<h3 class="section-title">Most Recent Training Run</h3>
+<a class="text-primary hover:underline font-label-md text-label-md flex items-center gap-xs" id="wandb-link" href="#" target="_blank" rel="noopener">
+                        View on W&amp;B
+                        <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+</div>
+<div class="flex-grow bg-surface-dim rounded overflow-hidden relative group min-h-[200px]">
+<img alt="W&amp;B Training Chart" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300" id="wandb-image" src="">
+</div>
+</div>
+</section>
+<!-- Performance Over Time -->
+<section class="grid grid-cols-1 gap-gutter">
+<div class="card p-md">
+<div class="flex justify-between items-center mb-md">
+<h3 class="section-title">Accuracy on Live Footage Over Time</h3>
+<div class="flex items-center gap-lg">
+<span class="flex items-center gap-xs text-body-sm font-body-sm text-secondary">
+<span class="w-3 h-3 bg-primary rounded-full"></span> Accuracy
+                        </span>
+<span class="flex items-center gap-xs text-body-sm font-body-sm text-secondary">
+<span class="w-0.5 h-3 bg-red-400"></span> Retrain
+                        </span>
+</div>
+</div>
+<div class="h-[300px]">
+<canvas height="600" id="performanceChart" style="display: block; box-sizing: border-box; height: 300px; width: 100%;" width="1772"></canvas>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-md italic">Vertical markers indicate model retrain events.</p>
+</div>
+</section>
+<!-- Confidence Examples -->
+<section class="space-y-md">
+<h3 class="section-title">Example Predictions by Confidence Level</h3>
+<div class="flex flex-wrap items-center gap-md mb-sm">
+<label class="text-body-sm text-secondary">Low/Medium threshold
+<input id="thresh-low" type="number" step="0.01" min="0" max="1" value="0.6" class="ml-xs w-20 px-sm py-xs border border-outline rounded font-mono-md text-body-sm">
+</label>
+<label class="text-body-sm text-secondary">Medium/High threshold
+<input id="thresh-high" type="number" step="0.01" min="0" max="1" value="0.9" class="ml-xs w-20 px-sm py-xs border border-outline rounded font-mono-md text-body-sm">
+</label>
+<button id="apply-thresholds" class="text-primary border border-primary px-sm py-xs rounded font-label-md text-label-md hover:bg-primary-fixed transition-colors">Apply</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Low Confidence Column -->
+<div class="space-y-md">
+<div class="flex items-center gap-sm pb-sm border-b border-outline-variant">
+<span class="w-3 h-3 bg-red-600 rounded-full"></span>
+<h4 class="font-label-md text-label-md text-on-surface uppercase">Low Confidence</h4>
+</div>
+<div class="space-y-sm" id="examples-low"></div>
+</div>
+<!-- Medium Confidence Column -->
+<div class="space-y-md">
+<div class="flex items-center gap-sm pb-sm border-b border-outline-variant">
+<span class="w-3 h-3 bg-orange-50 rounded-full border border-yellow-600"></span>
+<h4 class="font-label-md text-label-md text-on-surface uppercase">Medium Confidence</h4>
+</div>
+<div class="space-y-sm" id="examples-medium"></div>
+</div>
+<!-- High Confidence Column -->
+<div class="space-y-md">
+<div class="flex items-center gap-sm pb-sm border-b border-outline-variant">
+<span class="w-3 h-3 bg-green-600 rounded-full"></span>
+<h4 class="font-label-md text-label-md text-on-surface uppercase">High Confidence</h4>
+</div>
+<div class="space-y-sm" id="examples-high"></div>
+</div>
+</div>
+</section>
+<!-- Predictions Log -->
+<section class="card overflow-hidden">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-white">
+<h3 class="section-title">Predictions Log</h3>
+</div>
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-md py-sm font-label-md text-label-md text-secondary">ID</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary">Timestamp</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary">Prediction</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary">Confidence</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary">Frames</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary text-right">Verify Prediction</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant" id="predictions-tbody"></tbody>
+</table>
+</div>
+<div class="p-sm bg-surface border-t border-outline-variant flex justify-center">
+<button id="load-more-btn" class="text-primary font-label-md text-label-md hover:bg-primary-fixed px-md py-sm rounded transition-colors">Load more predictions...</button>
+</div>
+</section>
+</main>
+<div id="frame-modal" class="frame-modal fixed inset-0 z-50 flex items-center justify-center p-lg" hidden>
+<div class="bg-white border border-outline-variant rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+<div class="p-md border-b border-outline-variant flex items-center justify-between gap-md">
+<div>
+<h3 class="section-title" id="frame-modal-title">Prediction Frame</h3>
+<p class="font-body-sm text-body-sm text-secondary mt-xs" id="frame-modal-meta"></p>
+</div>
+<button id="frame-modal-close" class="text-secondary hover:text-on-surface hover:bg-surface-container-high rounded p-xs transition-colors" type="button" aria-label="Close frame preview">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+</div>
+<div class="bg-surface-dim min-h-[320px] flex items-center justify-center">
+<img id="frame-modal-img" alt="Prediction frame preview" class="max-h-[72vh] w-full object-contain hidden">
+<p id="frame-modal-status" class="font-body-md text-body-md text-secondary">Loading frame...</p>
+</div>
+</div>
+</div>
+<footer class="mt-xxl border-t border-outline-variant p-lg flex justify-center items-center">
+<div class="flex flex-col sm:flex-row items-center gap-xs sm:gap-md text-center">
+<span class="font-headline-sm font-bold text-secondary">Delivery Detector</span>
+<span class="hidden sm:inline text-outline">/</span>
+<span class="font-body-sm text-body-sm text-secondary">Angela Tan</span>
+</div>
+</footer>
+<script>
+// ============================================================
+// CONFIG — change this if your FastAPI server runs elsewhere
+// ============================================================
+const API_BASE = "http://localhost:8000";
+
+// ============================================================
+// State
+// ============================================================
+let predictionsOffset = 0;
+const PREDICTIONS_PAGE_SIZE = 25;
+let performanceChart = null;
+
+// ============================================================
+// Helpers
+// ============================================================
+function pct(value) {
+    if (value === null || value === undefined || isNaN(value)) return "—";
+    return (value * 100).toFixed(1) + "%";
+}
+
+function frameUrl(filename) {
+    if (!filename) return "";
+    return `${API_BASE}/frames/${encodeURIComponent(filename)}`;
+}
+
+function assetUrl(filename) {
+    if (!filename) return "";
+    return `${API_BASE}/assets/${encodeURIComponent(filename)}`;
+}
+
+function escapeAttr(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+}
+
+async function getJSON(path) {
+    const res = await fetch(`${API_BASE}${path}`);
+    if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+    return res.json();
+}
+
+// ============================================================
+// Model Metrics (accuracy/precision/recall/f1, confusion matrix, W&B)
+// ============================================================
+async function loadMetrics() {
+    let metrics;
+    try {
+        metrics = await getJSON("/metrics");
+    } catch (e) {
+        console.error("Failed to load /metrics", e);
+        return;
+    }
+    if (metrics.error) {
+        document.getElementById("training-version").textContent = metrics.error;
+        return;
+    }
+
+    document.getElementById("metric-accuracy").textContent = pct(metrics.accuracy);
+    document.getElementById("metric-precision").textContent = pct(metrics.precision);
+    document.getElementById("metric-recall").textContent = pct(metrics.recall);
+    document.getElementById("metric-f1").textContent = pct(metrics.f1);
+
+    const trainingVersion = document.getElementById("training-version");
+    try {
+        const retrains = await getJSON("/retrains");
+        const latestRetrain = (retrains || [])
+            .filter(retrain => retrain.timestamp || retrain.notes)
+            .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))[0];
+        trainingVersion.textContent = latestRetrain?.notes
+            ? `Training version: ${latestRetrain.notes}`
+            : "Training version: most recent model";
+    } catch (e) {
+        trainingVersion.textContent = "Training version: most recent model";
+    }
+
+    // Confusion matrix (assumes 2x2, labels = [class0, class1])
+    if (metrics.confusion_matrix && metrics.labels) {
+        const [label0, label1] = metrics.labels;
+        const cm = metrics.confusion_matrix;
+        const container = document.getElementById("confusion-matrix");
+        container.querySelector(".col-pred-0").textContent = `Predicted ${label0}`;
+        container.querySelector(".col-pred-1").textContent = `Predicted ${label1}`;
+        container.querySelector(".row-label-0").textContent = `Actual: ${label0}`;
+        container.querySelector(".row-label-1").textContent = `Actual: ${label1}`;
+        container.querySelector(".cell-00").textContent = cm[0][0];
+        container.querySelector(".cell-01").textContent = cm[0][1];
+        container.querySelector(".cell-10").textContent = cm[1][0];
+        container.querySelector(".cell-11").textContent = cm[1][1];
+    }
+
+    // Weights & Biases
+    if (metrics.wandb) {
+        const link = document.getElementById("wandb-link");
+        const img = document.getElementById("wandb-image");
+        if (metrics.wandb.run_url) link.href = metrics.wandb.run_url;
+        const sampleImage = metrics.wandb.sample_image_url || assetUrl(metrics.wandb.sample_image);
+        if (sampleImage) img.src = sampleImage;
+    }
+}
+
+// ============================================================
+// Performance Over Time chart (accuracy on labeled live footage + retrain markers)
+// ============================================================
+async function loadPerformanceChart() {
+    let timeline, retrains;
+    try {
+        [timeline, retrains] = await Promise.all([
+            getJSON("/predictions/timeline"),
+            getJSON("/retrains"),
+        ]);
+    } catch (e) {
+        console.error("Failed to load timeline/retrains", e);
+        return;
+    }
+
+    const labels = timeline.map(row => row.day);
+    const data = timeline.map(row => row.accuracy === null ? null : row.accuracy * 100);
+
+    // retrain dates as plain YYYY-MM-DD, to match `day` labels
+    const retrainDays = (retrains || [])
+        .map(r => (r.timestamp || "").slice(0, 10))
+        .filter(Boolean);
+
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+
+    if (performanceChart) {
+        performanceChart.destroy();
+    }
+
+    performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Accuracy',
+                data: data,
+                borderColor: '#004ac6',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                backgroundColor: 'rgba(0, 74, 198, 0.05)',
+                pointRadius: 3,
+                pointBackgroundColor: '#004ac6',
+                spanGaps: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: '#ffffff',
+                    titleColor: '#191c1e',
+                    bodyColor: '#505f76',
+                    borderColor: '#e2e8f0',
+                    borderWidth: 1,
+                    padding: 10,
+                    bodyFont: { family: 'Inter' }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10, family: 'Inter' }, color: '#737686' }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: value => value + '%',
+                        font: { size: 10, family: 'Inter' },
+                        color: '#737686'
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDraw: chart => {
+                const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+                retrainDays.forEach(day => {
+                    if (!labels.includes(day)) return; // only draw if day is on the axis
+                    const xPos = x.getPixelForValue(day);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]);
+                    ctx.moveTo(xPos, top);
+                    ctx.lineTo(xPos, bottom);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#dc2626';
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+        }]
+    });
+}
+
+// ============================================================
+// Confidence Examples (low/medium/high, with frame images)
+// ============================================================
+function renderExampleCard(pred) {
+    const conf = pred.mean_prob;
+    let badgeClass = "bg-secondary text-on-secondary";
+    if (conf < 0.6) badgeClass = "bg-red-600 text-white";
+    else if (conf < 0.9) badgeClass = "bg-orange-50 text-yellow-600 border border-yellow-600";
+    else badgeClass = "bg-green-600 text-white";
+
+    const cardId = `example-img-${pred.id}`;
+
+    return `
+        <div class="card overflow-hidden">
+            <div class="aspect-[1.5] bg-surface relative">
+                <img id="${cardId}" alt="Prediction frame" class="hidden w-full h-full object-cover">
+                <div class="absolute top-2 right-2 ${badgeClass} px-sm py-xs rounded text-label-sm font-label-sm">
+                    ${pct(conf)}
+                </div>
+            </div>
+            <div class="p-sm flex justify-between items-center bg-white">
+                <span class="font-body-md text-body-md font-medium">${pred.prediction}</span>
+                <span class="font-mono-md text-body-sm text-secondary">${pred.timestamp}</span>
+            </div>
+        </div>
+    `;
+}
+
+async function loadFrameImage(pred) {
+    const img = document.getElementById(`example-img-${pred.id}`);
+    if (!img || !pred.clip_filename) return;
+    try {
+        const res = await getJSON(`/frames-for/${encodeURIComponent(pred.clip_filename)}`);
+        img.onload = () => img.classList.remove("hidden");
+        img.onerror = () => img.classList.add("hidden");
+        img.src = frameUrl(res.filename);
+    } catch (e) {
+        img.classList.add("hidden");
+    }
+}
+
+async function loadExamples() {
+    const low = parseFloat(document.getElementById("thresh-low").value) || 0.6;
+    const high = parseFloat(document.getElementById("thresh-high").value) || 0.9;
+
+    let data;
+    try {
+        data = await getJSON(`/examples?low=${low}&high=${high}&n=1`);
+    } catch (e) {
+        console.error("Failed to load /examples", e);
+        return;
+    }
+
+    for (const level of ["low", "medium", "high"]) {
+        const container = document.getElementById(`examples-${level}`);
+        const items = data[level] || [];
+        if (items.length === 0) {
+            container.innerHTML = `<p class="text-body-sm text-secondary">No examples in this range.</p>`;
+        } else {
+            container.innerHTML = items.map(renderExampleCard).join("");
+            items.forEach(loadFrameImage);
+        }
+    }
+}
+
+// ============================================================
+// Predictions Log (scrollable table with labeling buttons)
+// ============================================================
+function renderPredictionRow(pred) {
+    const clipFilename = escapeAttr(pred.clip_filename);
+    const modalTitle = escapeAttr(`#${pred.id} ${pred.prediction}`);
+    const modalMeta = escapeAttr(`${pred.timestamp} • ${pct(pred.mean_prob)} • ${pred.num_frames ?? "—"} frames`);
+    const labelCell = `
+        <td class="px-md py-sm text-right space-x-sm" id="label-cell-${pred.id}">
+            ${renderLabelControls(pred)}
+        </td>
+    `;
+    return `
+        <tr class="prediction-row transition-colors" data-clip-filename="${clipFilename}" data-modal-title="${modalTitle}" data-modal-meta="${modalMeta}" onclick="openPredictionFrame(this)">
+            <td class="px-md py-sm font-mono-md text-body-sm text-on-surface">#${pred.id}</td>
+            <td class="px-md py-sm font-body-sm text-secondary">${pred.timestamp}</td>
+            <td class="px-md py-sm font-body-md text-on-surface">${pred.prediction}</td>
+            <td class="px-md py-sm font-mono-md text-body-sm font-bold text-on-surface">${pct(pred.mean_prob)}</td>
+            <td class="px-md py-sm font-mono-md text-body-sm text-on-surface">${pred.num_frames ?? "—"}</td>
+            ${labelCell}
+        </tr>
+    `;
+}
+
+function renderLabelControls(pred) {
+    if (pred.correct === 1) {
+        return `<span class="text-green-600 flex items-center justify-end gap-xs font-label-sm font-bold">
+                    <span class="material-symbols-outlined text-[14px]">check_circle</span> Correct
+                </span>`;
+    }
+    if (pred.correct === 0) {
+        return `<span class="text-red-600 flex items-center justify-end gap-xs font-label-sm font-bold">
+                    <span class="material-symbols-outlined text-[14px]">close</span> Incorrect
+                </span>`;
+    }
+    return `
+        <button class="text-primary hover:bg-primary-fixed px-sm py-xs rounded font-label-md text-label-md transition-colors border border-primary"
+                onclick="event.stopPropagation(); labelPrediction(${pred.id}, 1)">Correct</button>
+        <button class="text-red-600 hover:bg-error-container px-sm py-xs rounded font-label-md text-label-md transition-colors border border-red-600"
+                onclick="event.stopPropagation(); labelPrediction(${pred.id}, 0)">Incorrect</button>
+    `;
+}
+
+async function openPredictionFrame(row) {
+    const clipFilename = row.dataset.clipFilename;
+    const modal = document.getElementById("frame-modal");
+    const img = document.getElementById("frame-modal-img");
+    const status = document.getElementById("frame-modal-status");
+    document.getElementById("frame-modal-title").textContent = row.dataset.modalTitle || "Prediction Frame";
+    document.getElementById("frame-modal-meta").textContent = row.dataset.modalMeta || "";
+    modal.hidden = false;
+    img.classList.add("hidden");
+    img.removeAttribute("src");
+    status.classList.remove("hidden");
+    status.textContent = "Loading frame...";
+
+    try {
+        const res = await getJSON(`/frames-for/${encodeURIComponent(clipFilename)}`);
+        img.onload = () => {
+            status.classList.add("hidden");
+            img.classList.remove("hidden");
+        };
+        img.onerror = () => {
+            img.classList.add("hidden");
+            status.classList.remove("hidden");
+            status.textContent = "Frame could not be loaded.";
+        };
+        img.src = frameUrl(res.filename);
+    } catch (e) {
+        img.classList.add("hidden");
+        status.classList.remove("hidden");
+        status.textContent = "No frame found for this prediction.";
+    }
+}
+
+function closePredictionFrame() {
+    const modal = document.getElementById("frame-modal");
+    const img = document.getElementById("frame-modal-img");
+    modal.hidden = true;
+    img.removeAttribute("src");
+}
+
+async function labelPrediction(id, correctValue) {
+    try {
+        const res = await fetch(`${API_BASE}/predictions/${id}/label`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ correct: correctValue }),
+        });
+        if (!res.ok) throw new Error(`label -> ${res.status}`);
+        const cell = document.getElementById(`label-cell-${id}`);
+        cell.innerHTML = renderLabelControls({ correct: correctValue });
+        // Refresh the timeline since labeling affects accuracy-over-time
+        loadPerformanceChart();
+    } catch (e) {
+        console.error("Failed to label prediction", e);
+        alert("Failed to save label. Check the backend is running.");
+    }
+}
+
+async function loadPredictions(reset = false) {
+    if (reset) {
+        predictionsOffset = 0;
+        document.getElementById("predictions-tbody").innerHTML = "";
+    }
+    let rows;
+    try {
+        rows = await getJSON(`/predictions?limit=${PREDICTIONS_PAGE_SIZE}&offset=${predictionsOffset}`);
+    } catch (e) {
+        console.error("Failed to load /predictions", e);
+        return;
+    }
+    const tbody = document.getElementById("predictions-tbody");
+    tbody.insertAdjacentHTML("beforeend", rows.map(renderPredictionRow).join(""));
+    predictionsOffset += rows.length;
+
+    // Hide "load more" if we got fewer rows than requested (end of data)
+    document.getElementById("load-more-btn").style.display =
+        rows.length < PREDICTIONS_PAGE_SIZE ? "none" : "block";
+}
+
+// ============================================================
+// Wire up + initial load
+// ============================================================
+function setRefreshState(isRefreshing) {
+    const button = document.getElementById("refresh-btn");
+    const label = document.getElementById("refresh-label");
+    button.disabled = isRefreshing;
+    button.classList.toggle("refreshing", isRefreshing);
+    button.classList.toggle("opacity-90", isRefreshing);
+    button.classList.toggle("cursor-wait", isRefreshing);
+    label.textContent = isRefreshing ? "Refreshing..." : "Refresh Data";
+}
+
+async function refreshAll(showFeedback = false) {
+    const startedAt = Date.now();
+    if (showFeedback) {
+        setRefreshState(true);
+        document.querySelector("main").classList.remove("dashboard-refreshing");
+        requestAnimationFrame(() => document.querySelector("main").classList.add("dashboard-refreshing"));
+    }
+    document.getElementById("last-updated").textContent = new Date().toLocaleString();
+    try {
+        await Promise.all([
+            loadMetrics(),
+            loadPerformanceChart(),
+            loadExamples(),
+            loadPredictions(true),
+        ]);
+    } finally {
+        if (showFeedback) {
+            const elapsed = Date.now() - startedAt;
+            const remaining = Math.max(0, 450 - elapsed);
+            setTimeout(() => setRefreshState(false), remaining);
+        }
+    }
+}
+
+document.getElementById("refresh-btn").addEventListener("click", () => refreshAll(true));
+document.getElementById("load-more-btn").addEventListener("click", () => loadPredictions(false));
+document.getElementById("apply-thresholds").addEventListener("click", loadExamples);
+document.getElementById("frame-modal-close").addEventListener("click", closePredictionFrame);
+document.getElementById("frame-modal").addEventListener("click", event => {
+    if (event.target.id === "frame-modal") closePredictionFrame();
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closePredictionFrame();
+});
+
+refreshAll();
+</script>
+
+
+</body></html>
