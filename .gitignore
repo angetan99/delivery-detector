@@ -10,3 +10,4 @@ inference/clips/
 inference/frames/
 predictions.db
 launchd.log
+__pycache__/
