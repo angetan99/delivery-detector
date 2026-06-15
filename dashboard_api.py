@@ -1,10 +1,14 @@
 import sqlite3
 import json
+import os
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_PATH = "predictions.db"
 METRICS_PATH = "model_metrics.json"
@@ -97,7 +101,11 @@ def get_metrics():
     path = Path(METRICS_PATH)
     if not path.exists():
         return {"error": "model_metrics.json not found"}
-    return json.loads(path.read_text())
+    metrics = json.loads(path.read_text())
+    wandb_run_url = os.getenv("WANDB_RUN_URL")
+    if wandb_run_url:
+        metrics.setdefault("wandb", {})["run_url"] = wandb_run_url
+    return metrics
 
 
 @app.get("/assets/{filename}")

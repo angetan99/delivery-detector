@@ -7,7 +7,6 @@
   "labels": ["delivery", "no_delivery"],
   "evaluated_at": "2026-06-11T23:27:00",
   "wandb": {
-    "run_url": "https://wandb.ai/angelatan2007-purdue-university/delivery-detector/workspace?nw=nwuserangelatan2007",
     "sample_image": "w&b_Example.png"
   }
 }

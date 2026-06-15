@@ -5,6 +5,8 @@ live prediction history. It shows model metrics, a confusion matrix, W&B trainin
 context, confidence examples, prediction history, and frame previews for logged
 clips.
 
+![Delivery Detector Dashboard](../Delivery%20Detector%20Dashboard.png)
+
 ## What It Shows
 
 - Current model metrics: accuracy, precision, recall, and F1
@@ -36,6 +38,10 @@ root so the local app keeps working without path changes:
 - `predictions.db` - local prediction history
 - `w&b_Example.png` - W&B training image used in the dashboard
 
+Optional local configuration:
+
+- `WANDB_RUN_URL` - private W&B run/workspace URL loaded from `.env`
+
 ## Updating The Dashboard
 
 When you make dashboard changes, commit the moved HTML file and any related data
@@ -53,4 +59,3 @@ Only add the files you actually changed.
 ## Links
 
 - [GitHub Repo](https://github.com/angetan99/delivery-detector)
-- [W&B Log](https://wandb.ai/angelatan2007-purdue-university/delivery-detector/workspace?nw=nwuserangelatan2007)

@@ -206,7 +206,7 @@
 Github Repo
 <span class="material-symbols-outlined text-[16px]">open_in_new</span>
 </a>
-<a class="text-primary border border-primary px-sm py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-fixed transition-colors" href="https://wandb.ai/angelatan2007-purdue-university/delivery-detector/workspace?nw=nwuserangelatan2007" target="_blank" rel="noopener">
+<a hidden class="text-primary border border-primary px-sm py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:bg-primary-fixed transition-colors" id="header-wandb-link" href="#" target="_blank" rel="noopener">
 W&amp;B Log
 <span class="material-symbols-outlined text-[16px]">open_in_new</span>
 </a>
@@ -256,7 +256,7 @@ W&amp;B Log
 <div class="card p-md lg:col-span-6 flex flex-col">
 <div class="flex justify-between items-start mb-md">
 <h3 class="section-title">Most Recent Training Run</h3>
-<a class="text-primary hover:underline font-label-md text-label-md flex items-center gap-xs" id="wandb-link" href="#" target="_blank" rel="noopener">
+<a hidden class="text-primary hover:underline font-label-md text-label-md flex items-center gap-xs" id="wandb-link" href="#" target="_blank" rel="noopener">
                         View on W&amp;B
                         <span class="material-symbols-outlined text-[16px]">open_in_new</span>
 </a>
@@ -471,8 +471,14 @@ async function loadMetrics() {
     // Weights & Biases
     if (metrics.wandb) {
         const link = document.getElementById("wandb-link");
+        const headerLink = document.getElementById("header-wandb-link");
         const img = document.getElementById("wandb-image");
-        if (metrics.wandb.run_url) link.href = metrics.wandb.run_url;
+        if (metrics.wandb.run_url) {
+            link.href = metrics.wandb.run_url;
+            headerLink.href = metrics.wandb.run_url;
+            link.hidden = false;
+            headerLink.hidden = false;
+        }
         const sampleImage = metrics.wandb.sample_image_url || assetUrl(metrics.wandb.sample_image);
         if (sampleImage) img.src = sampleImage;
     }
