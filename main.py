@@ -9,7 +9,9 @@ from pydantic import BaseModel
 DB_PATH = "predictions.db"
 METRICS_PATH = "model_metrics.json"
 RETRAINS_PATH = "retrains.json" # log of retraining events (timestamp, improvements, metrics)
-FRAMES_DIR = Path("inference/frames")
+BASE_DIR = Path(__file__).resolve().parent
+FRAMES_DIR = BASE_DIR / "inference" / "frames"
+DASHBOARD_ASSETS_DIR = BASE_DIR
 
 app = FastAPI()
 
@@ -96,6 +98,14 @@ def get_metrics():
     if not path.exists():
         return {"error": "model_metrics.json not found"}
     return json.loads(path.read_text())
+
+
+@app.get("/assets/{filename}")
+def get_dashboard_asset(filename: str):
+    path = DASHBOARD_ASSETS_DIR / Path(filename).name
+    if not path.exists() or not path.is_file():
+        raise HTTPException(404, "asset not found")
+    return FileResponse(path)
 
 
 @app.get("/examples")
