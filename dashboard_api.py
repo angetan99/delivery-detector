@@ -2,8 +2,6 @@ import sqlite3
 import json
 import os
 from pathlib import Path
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +16,6 @@ RETRAINS_PATH = "retrains.json" # log of retraining events (timestamp, improveme
 BASE_DIR = Path(__file__).resolve().parent
 FRAMES_DIR = BASE_DIR / "inference" / "frames"
 DASHBOARD_ASSETS_DIR = BASE_DIR
-LOCAL_TZ = ZoneInfo(os.getenv("DASHBOARD_TIMEZONE", "America/Los_Angeles"))
 
 app = FastAPI()
 
@@ -91,51 +88,6 @@ def get_timeline():
     return rows
 
 
-def parse_dashboard_timestamp(value: str):
-    try:
-        timestamp = datetime.fromisoformat(value)
-    except ValueError:
-        raise HTTPException(400, "since must be an ISO timestamp")
-    if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=LOCAL_TZ)
-    return timestamp.astimezone(timezone.utc)
-
-
-@app.get("/predictions/by-hour")
-def get_predictions_by_hour(since: str | None = None):
-    since_utc = parse_dashboard_timestamp(since) if since else None
-    conn = get_db()
-    cur = conn.execute("""
-        SELECT timestamp, correct
-        FROM predictions
-        WHERE correct IS NOT NULL
-    """)
-    buckets = {
-        hour: {"hour": hour, "total_labeled": 0, "num_correct": 0}
-        for hour in range(24)
-    }
-    for r in cur.fetchall():
-        timestamp = datetime.fromisoformat(r["timestamp"])
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
-        if since_utc and timestamp < since_utc:
-            continue
-        local_hour = timestamp.astimezone(LOCAL_TZ).hour
-        buckets[local_hour]["total_labeled"] += 1
-        buckets[local_hour]["num_correct"] += r["correct"]
-    conn.close()
-
-    rows = []
-    for bucket in buckets.values():
-        total = bucket["total_labeled"]
-        rows.append({
-            "hour": bucket["hour"],
-            "total_labeled": total,
-            "accuracy": bucket["num_correct"] / total if total else None,
-        })
-    return rows
-
-
 @app.get("/retrains")
 def get_retrains():
     path = Path(RETRAINS_PATH)
@@ -182,6 +134,36 @@ def get_examples(low: float = 0.6, high: float = 0.9, n: int = 5):
         result[name] = [dict(r) for r in cur.fetchall()]
     conn.close()
     return result
+
+
+@app.get("/predictions/by-hour")
+def get_accuracy_by_hour():
+    """Accuracy grouped by hour of day (0-23) in local time (UTC-7 / PDT),
+    regardless of date. Helps spot if certain times of day have unstable/low
+    accuracy, e.g. due to lighting conditions undertrained in the model.
+    NOTE: timestamps in the DB are stored in UTC (datetime.utcnow()), so we
+    convert to local time here before grouping."""
+    conn = get_db()
+    cur = conn.execute("""
+        SELECT
+            CAST(strftime('%H', timestamp, '-7 hours') AS INTEGER) AS hour,
+            COUNT(*) AS total_labeled,
+            SUM(correct) AS num_correct
+        FROM predictions
+        WHERE correct IS NOT NULL
+        GROUP BY hour
+        ORDER BY hour ASC
+    """)
+    rows = []
+    for r in cur.fetchall():
+        total = r["total_labeled"]
+        rows.append({
+            "hour": r["hour"],
+            "total_labeled": total,
+            "accuracy": r["num_correct"] / total if total else None,
+        })
+    conn.close()
+    return rows
 
 
 @app.get("/frames/{filename}")
