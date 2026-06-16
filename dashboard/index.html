@@ -286,6 +286,28 @@ W&amp;B Log
 <p class="font-body-sm text-body-sm text-secondary mt-md italic">Vertical markers indicate model retrain events.</p>
 </div>
 </section>
+<!-- Accuracy by Hour of Day -->
+<section class="grid grid-cols-1 gap-gutter">
+<div class="card p-md">
+<div class="flex justify-between items-center mb-md">
+<h3 class="section-title">Accuracy by Hour of Day</h3>
+<div class="flex flex-wrap items-center justify-end gap-sm">
+<select id="hour-version-select" class="px-sm py-xs border border-outline rounded bg-white font-body-sm text-body-sm text-on-surface">
+<option value="">All data</option>
+</select>
+<span class="flex items-center gap-xs text-body-sm font-body-sm text-secondary">
+<span class="w-3 h-3 bg-primary rounded-full"></span> Accuracy
+                        </span>
+<span class="flex items-center gap-xs text-body-sm font-body-sm text-secondary">
+<span class="w-3 h-3 bg-secondary rounded-full opacity-50"></span> Sample count
+                        </span>
+</div>
+</div>
+<div class="h-[300px]">
+<canvas height="600" id="hourChart" style="display: block; box-sizing: border-box; height: 300px; width: 100%;" width="1772"></canvas>
+</div>
+</div>
+</section>
 <!-- Confidence Examples -->
 <section class="space-y-md">
 <h3 class="section-title">Example Predictions by Confidence Level</h3>
@@ -386,6 +408,9 @@ const API_BASE = "http://localhost:8000";
 let predictionsOffset = 0;
 const PREDICTIONS_PAGE_SIZE = 25;
 let performanceChart = null;
+let hourChart = null;
+let retrainVersions = [];
+let hourVersionOptionsLoaded = false;
 
 // ============================================================
 // Helpers
@@ -586,6 +611,159 @@ async function loadPerformanceChart() {
 }
 
 // ============================================================
+// Accuracy by Hour of Day (dual-axis: accuracy line + sample count bars)
+// ============================================================
+function formatTrainingVersion(retrain, indexFromLatest) {
+    if (retrain.notes) return retrain.notes;
+    if (retrain.timestamp) return `Training ${indexFromLatest + 1} (${retrain.timestamp.slice(0, 10)})`;
+    return `Training ${indexFromLatest + 1}`;
+}
+
+async function loadHourVersionOptions() {
+    const select = document.getElementById("hour-version-select");
+    if (!select || hourVersionOptionsLoaded) return;
+
+    let retrains;
+    try {
+        retrains = await getJSON("/retrains");
+    } catch (e) {
+        console.error("Failed to load retrain versions", e);
+        hourVersionOptionsLoaded = true;
+        return;
+    }
+
+    retrainVersions = (retrains || [])
+        .filter(retrain => retrain.timestamp)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    const latestTimestamp = retrainVersions[0]?.timestamp || "";
+    const versionOptions = retrainVersions
+        .map((retrain, index) => {
+            const label = index === 0
+                ? `Since latest: ${formatTrainingVersion(retrain, index)}`
+                : `Since ${formatTrainingVersion(retrain, index)}`;
+            return `<option value="${escapeAttr(retrain.timestamp)}">${escapeAttr(label)}</option>`;
+        })
+        .join("");
+
+    select.innerHTML = retrainVersions.length
+        ? `${versionOptions}<option value="">All data</option>`
+        : `<option value="">All data</option>`;
+    select.value = latestTimestamp;
+    hourVersionOptionsLoaded = true;
+}
+
+async function loadHourChart() {
+    let byHour;
+    try {
+        await loadHourVersionOptions();
+        const selectedSince = document.getElementById("hour-version-select")?.value || "";
+        const query = selectedSince ? `?since=${encodeURIComponent(selectedSince)}` : "";
+        byHour = await getJSON(`/predictions/by-hour${query}`);
+    } catch (e) {
+        console.error("Failed to load by-hour accuracy", e);
+        return;
+    }
+
+    // ensure all 24 hours present, even if no data, so axis is consistent
+    const hourMap = new Map(byHour.map(row => [row.hour, row]));
+    const hours = Array.from({ length: 24 }, (_, h) => h);
+    const labels = hours.map(h => `${h}:00`);
+    const accuracyData = hours.map(h => {
+        const row = hourMap.get(h);
+        return row && row.accuracy !== null ? row.accuracy * 100 : null;
+    });
+    const countData = hours.map(h => {
+        const row = hourMap.get(h);
+        return row ? row.total_labeled : 0;
+    });
+
+    const ctx = document.getElementById('hourChart').getContext('2d');
+
+    if (hourChart) {
+        hourChart.destroy();
+    }
+
+    hourChart = new Chart(ctx, {
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Sample count',
+                    data: countData,
+                    backgroundColor: 'rgba(115, 118, 134, 0.25)',
+                    yAxisID: 'yCount',
+                    order: 2,
+                },
+                {
+                    type: 'line',
+                    label: 'Accuracy',
+                    data: accuracyData,
+                    borderColor: '#004ac6',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#004ac6',
+                    spanGaps: true,
+                    yAxisID: 'yAccuracy',
+                    order: 1,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: '#ffffff',
+                    titleColor: '#191c1e',
+                    bodyColor: '#505f76',
+                    borderColor: '#e2e8f0',
+                    borderWidth: 1,
+                    padding: 10,
+                    bodyFont: { family: 'Inter' },
+                    callbacks: {
+                        label: ctx => {
+                            if (ctx.dataset.label === 'Accuracy') {
+                                return ctx.raw === null ? 'Accuracy: no data' : `Accuracy: ${ctx.raw.toFixed(1)}%`;
+                            }
+                            return `Samples: ${ctx.raw}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10, family: 'Inter' }, color: '#737686' }
+                },
+                yAccuracy: {
+                    position: 'left',
+                    min: 0,
+                    max: 100,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: value => value + '%',
+                        font: { size: 10, family: 'Inter' },
+                        color: '#737686'
+                    }
+                },
+                yCount: {
+                    position: 'right',
+                    min: 0,
+                    grid: { display: false },
+                    ticks: { font: { size: 10, family: 'Inter' }, color: '#737686' }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================
 // Confidence Examples (low/medium/high, with frame images)
 // ============================================================
 function renderExampleCard(pred) {
@@ -744,6 +922,7 @@ async function labelPrediction(id, correctValue) {
         cell.innerHTML = renderLabelControls({ correct: correctValue });
         // Refresh the timeline since labeling affects accuracy-over-time
         loadPerformanceChart();
+        loadHourChart();
     } catch (e) {
         console.error("Failed to label prediction", e);
         alert("Failed to save label. Check the backend is running.");
@@ -796,6 +975,7 @@ async function refreshAll(showFeedback = false) {
         await Promise.all([
             loadMetrics(),
             loadPerformanceChart(),
+            loadHourChart(),
             loadExamples(),
             loadPredictions(true),
         ]);
@@ -811,6 +991,7 @@ async function refreshAll(showFeedback = false) {
 document.getElementById("refresh-btn").addEventListener("click", () => refreshAll(true));
 document.getElementById("load-more-btn").addEventListener("click", () => loadPredictions(false));
 document.getElementById("apply-thresholds").addEventListener("click", loadExamples);
+document.getElementById("hour-version-select").addEventListener("change", loadHourChart);
 document.getElementById("frame-modal-close").addEventListener("click", closePredictionFrame);
 document.getElementById("frame-modal").addEventListener("click", event => {
     if (event.target.id === "frame-modal") closePredictionFrame();
