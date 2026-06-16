@@ -218,10 +218,18 @@ def on_motion(model, conn, camera, attr, value):
           f"(mean prob: {result['mean_prob']:.1%})  "
           f"{'[confident]' if result['confident'] else '[uncertain]'}\n")
 
-
+# ── Arlo connection reset if network failure ─────────────────────────────────────────────────
+class ArloConnectionWatchdog(logging.Handler):
+    def emit(self, record):
+        message = record.getMessage()
+        if "failed to read active mode" in message or "failed to read modes" in message:
+            log.error("Arlo connection appears dead — exiting for launchd restart.")
+            os._exit(1)
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    logging.getLogger().addHandler(ArloConnectionWatchdog())
+    
     os.makedirs(CLIPS_DIR, exist_ok=True)
     os.makedirs(FRAMES_DIR, exist_ok=True)
 
