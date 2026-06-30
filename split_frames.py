@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 
-interval = 40
+interval = 15
 input_folder = "Clips"
 output_folder = "Frames"
 

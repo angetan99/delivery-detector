@@ -11,3 +11,4 @@ inference/frames/
 predictions.db
 launchd.log
 __pycache__/
+colab v2 files/

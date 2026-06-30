@@ -1,3 +1,4 @@
 [ 
-  {"timestamp": "2026-06-11T23:27:00", "notes": "v1: initial training"}
+  {"timestamp": "2026-06-11T23:27:00", "notes": "v1: initial training"},
+  {"timestamp": "2026-06-30T11:15:00", "notes": "v2: total 1368 frames with more variation in lighting"}
 ]

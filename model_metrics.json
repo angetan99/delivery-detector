@@ -1,11 +1,11 @@
 {
-  "accuracy": 0.9865,
-  "recall": 1.0,
-  "precision": 0.97,
-  "f1": 0.984,
-  "confusion_matrix": [[74, 0], [2, 72]],
+  "accuracy": 0.9127,
+  "recall": 0.9051,
+  "precision": 0.9185,
+  "f1": 0.9117,
+  "confusion_matrix": [[124, 13], [11, 127]],
   "labels": ["delivery", "no_delivery"],
-  "evaluated_at": "2026-06-11T23:27:00",
+  "evaluated_at": "2026-06-30T11:15:00",
   "wandb": {
     "sample_image": "w&b_Example.png"
   }
